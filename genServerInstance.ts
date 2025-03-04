@@ -4,7 +4,7 @@ import { parseArgs } from "jsr:@std/cli/parse-args";
 async function genServerInstanceFile() {
     const args = parseArgs(Deno.args);
 
-    let inServerFile = args.in ?? "./server.ts";
+    let inServerFile = args.in ?? "./template/server.ts";
     inServerFile = inServerFile.endsWith(".ts")
         ? inServerFile
         : `${inServerFile}.ts`;
@@ -18,7 +18,7 @@ async function genServerInstanceFile() {
         }
     })();
 
-    let outServerFile = args.out ?? "./server_instance.ts";
+    let outServerFile = args.out ?? "./main.ts";
     outServerFile = outServerFile.endsWith(".ts")
         ? outServerFile
         : `${outServerFile}.ts`;
