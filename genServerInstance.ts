@@ -4,7 +4,7 @@ import { parseArgs } from "jsr:@std/cli/parse-args";
 async function genServerInstanceFile() {
     const args = parseArgs(Deno.args);
 
-    let inServerFile = args.in ?? "./template/server.ts";
+    let inServerFile = args.in ?? "./template/server.ts"; // input template server file
     inServerFile = inServerFile.endsWith(".ts")
         ? inServerFile
         : `${inServerFile}.ts`;
@@ -13,18 +13,34 @@ async function genServerInstanceFile() {
         try {
             await Deno.stat(inServerFile);
         } catch {
-            console.error(`Error: "${inServerFile}" is not existing`);
+            console.error(`❌ "${inServerFile}" is not existing`);
             Deno.exit(1);
         }
     })();
 
-    let outServerFile = args.out ?? "./main.ts";
+    // looking for output file name from deno.json deploy.entrypoint
+    let outServerFile = "";
+    try {
+        const prjConfig = await Deno.readTextFile("deno.json");
+        const data = JSON.parse(prjConfig);
+        const entrypoint = data.deploy?.entrypoint; // output instance server file
+        if (!entrypoint) {
+            console.error("❌ 未在 deno.json 中找到 deploy.entrypoint");
+            Deno.exit(1);
+        }
+        outServerFile = entrypoint;
+    } catch {
+        console.error("❌ 读取或解析 deno.json 失败");
+        Deno.exit(1);
+    }
+
     outServerFile = outServerFile.endsWith(".ts")
         ? outServerFile
         : `${outServerFile}.ts`;
 
+    // looking for routes folder
     const routeFiles = await (async () => {
-        const routeDir = args.routes ?? "./routes";
+        const routeDir = args.routes ?? "./routes"; // routes folder
         const routeFiles = [];
         for await (const dirEntry of Deno.readDir(routeDir)) {
             if (dirEntry.isFile && dirEntry.name.endsWith(".ts")) {
@@ -57,11 +73,11 @@ ${serverFileContent}
 
     //2. 将 router.use 语句插入到 server.ts 文件的合适位置
     serverFileContent = serverFileContent.replaceAll(
-        `// ROUTER.USE... //`,
+        `// ROUTER.USE... //`, // placeholder in template server.ts file
         routerUseStatements,
     );
 
-    // 写回修改后的 server.ts 文件
+    // 写回修改后的 outServerFile 文件
     await Deno.writeTextFile(outServerFile, serverFileContent);
 
     // 格式化输出文件
@@ -75,7 +91,7 @@ ${serverFileContent}
             new TextDecoder().decode(fmtProcess.stderr),
         );
     }
-    console.log("server.ts has been modified successfully!");
+    console.log(`"${outServerFile}" has been generated successfully!`);
 }
 
 // 执行修改
